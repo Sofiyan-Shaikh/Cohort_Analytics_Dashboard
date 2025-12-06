@@ -11,6 +11,10 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cohort_analytics_dashboards.settings')
+# Use production settings on Render
+settings_module = os.environ.get('DJANGO_SETTINGS_MODULE', 'cohort_analytics_dashboards.settings')
+if os.environ.get('RENDER'):
+    settings_module = 'cohort_analytics_dashboards.settings_prod'
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings_module)
 
 application = get_wsgi_application()

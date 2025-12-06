@@ -108,12 +108,13 @@ const App: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
       const [cohortResponse, funnelResponse, productsResponse, segmentsResponse, usersResponse] = await Promise.all([
-        axios.get<CohortData[]>('http://127.0.0.1:8002/api/cohorts/'),
-        axios.get<FunnelData[]>('http://127.0.0.1:8002/api/funnel/'),
-        axios.get<ProductData[]>('http://127.0.0.1:8002/api/products/'),
-        axios.get<SegmentData[]>('http://127.0.0.1:8002/api/segments/'),
-        axios.get<HighValueUser[]>('http://127.0.0.1:8002/api/users/'),
+        axios.get<CohortData[]>(`${API_URL}/api/cohorts/`),
+        axios.get<FunnelData[]>(`${API_URL}/api/funnel/`),
+        axios.get<ProductData[]>(`${API_URL}/api/products/`),
+        axios.get<SegmentData[]>(`${API_URL}/api/segments/`),
+        axios.get<HighValueUser[]>(`${API_URL}/api/users/`),
       ]);
       setCohortData(cohortResponse.data);
       setFunnelData(funnelResponse.data);
