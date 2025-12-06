@@ -47,3 +47,86 @@ def funnel_analysis(request):
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
     
     return JsonResponse(results, safe=False)
+
+
+def top_products(request):
+    """API endpoint for top products data"""
+    query = """
+    SELECT 
+        name,
+        category,
+        revenue,
+        units
+    FROM top_products
+    ORDER BY revenue DESC
+    LIMIT 8;
+    """
+    
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    return JsonResponse(results, safe=False)
+
+
+def user_segments(request):
+    """API endpoint for user segments data"""
+    query = """
+    SELECT 
+        segment_name,
+        user_count,
+        percentage,
+        color
+    FROM user_segments
+    ORDER BY percentage DESC;
+    """
+    
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    return JsonResponse(results, safe=False)
+
+
+def high_value_users(request):
+    """API endpoint for high value users data"""
+    segment_filter = request.GET.get('segment', 'all')
+    
+    if segment_filter == 'all':
+        query = """
+        SELECT 
+            user_id,
+            name,
+            email,
+            purchases,
+            ltv,
+            segment,
+            last_purchase
+        FROM high_value_users
+        ORDER BY ltv DESC;
+        """
+        params = []
+    else:
+        query = """
+        SELECT 
+            user_id,
+            name,
+            email,
+            purchases,
+            ltv,
+            segment,
+            last_purchase
+        FROM high_value_users
+        WHERE segment = ?
+        ORDER BY ltv DESC;
+        """
+        params = [segment_filter]
+    
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    return JsonResponse(results, safe=False)

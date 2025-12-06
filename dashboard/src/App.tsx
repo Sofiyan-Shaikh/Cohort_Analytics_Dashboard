@@ -9,6 +9,7 @@ import CohortAnalysisPage from './pages/CohortAnalysisPage';
 import FunnelAnalysisPage from './pages/FunnelAnalysisPage';
 import RevenueInsightsPage from './pages/RevenueInsightsPage';
 import UserSegmentationPage from './pages/UserSegmentationPage';
+import SettingsPage from './pages/SettingsPage';
 import { AlertCircle } from 'lucide-react';
 
 export interface CohortData {
@@ -23,12 +24,39 @@ export interface CohortData {
 export interface FunnelData {
   step: string;
   users: number;
-  percentage: number;
+  percentage: number | string;
+}
+
+export interface ProductData {
+  name: string;
+  category: string;
+  revenue: number;
+  units: number;
+}
+
+export interface SegmentData {
+  segment_name: string;
+  user_count: number;
+  percentage: number | string;
+  color: string;
+}
+
+export interface HighValueUser {
+  user_id: number;
+  name: string;
+  email: string;
+  purchases: number;
+  ltv: number;
+  segment: string;
+  last_purchase: string;
 }
 
 export interface AppContextType {
   cohortData: CohortData[];
   funnelData: FunnelData[];
+  productsData: ProductData[];
+  segmentsData: SegmentData[];
+  highValueUsers: HighValueUser[];
   dateRange: { start: string; end: string };
   setDateRange: (range: { start: string; end: string }) => void;
   deviceFilter: string;
@@ -47,6 +75,9 @@ const App: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [cohortData, setCohortData] = useState<CohortData[]>([]);
   const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
+  const [productsData, setProductsData] = useState<ProductData[]>([]);
+  const [segmentsData, setSegmentsData] = useState<SegmentData[]>([]);
+  const [highValueUsers, setHighValueUsers] = useState<HighValueUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -77,12 +108,18 @@ const App: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [cohortResponse, funnelResponse] = await Promise.all([
+      const [cohortResponse, funnelResponse, productsResponse, segmentsResponse, usersResponse] = await Promise.all([
         axios.get<CohortData[]>('http://127.0.0.1:8002/api/cohorts/'),
         axios.get<FunnelData[]>('http://127.0.0.1:8002/api/funnel/'),
+        axios.get<ProductData[]>('http://127.0.0.1:8002/api/products/'),
+        axios.get<SegmentData[]>('http://127.0.0.1:8002/api/segments/'),
+        axios.get<HighValueUser[]>('http://127.0.0.1:8002/api/users/'),
       ]);
       setCohortData(cohortResponse.data);
       setFunnelData(funnelResponse.data);
+      setProductsData(productsResponse.data);
+      setSegmentsData(segmentsResponse.data);
+      setHighValueUsers(usersResponse.data);
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Failed to load data. Please ensure backend is running on port 8002.');
@@ -96,7 +133,10 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
         <div className="relative">
           <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-          <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-indigo-400 rounded-full animate-spin" style={{ animationDuration: '0.8s' }} />
+          <div
+            className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-indigo-400 rounded-full animate-spin"
+            style={{ animationDuration: '0.8s' }}
+          />
         </div>
       </div>
     );
@@ -125,6 +165,9 @@ const App: React.FC = () => {
   const contextValue: AppContextType = {
     cohortData,
     funnelData,
+    productsData,
+    segmentsData,
+    highValueUsers,
     dateRange,
     setDateRange,
     deviceFilter,
@@ -139,28 +182,25 @@ const App: React.FC = () => {
 
   return (
     <AppContext.Provider value={contextValue}>
-      <div className="h-screen flex flex-col bg-[#0f172a] text-[#94a3b8] overflow-hidden">
-        {/* Fixed Header */}
-        <Header showFilters={showFilters} setShowFilters={setShowFilters} />
-        
-        {/* Content Row: Sidebar + Main */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Fixed Sidebar */}
-          <Sidebar />
-          
-          {/* Main Content Area - Scrollable */}
-          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#0f172a] w-full">
-            <GlobalFilters showFilters={showFilters} setShowFilters={setShowFilters} />
-            <div className="p-8 w-full max-w-full box-border">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/cohort-analysis" element={<CohortAnalysisPage />} />
-                <Route path="/funnel-analysis" element={<FunnelAnalysisPage />} />
-                <Route path="/revenue-insights" element={<RevenueInsightsPage />} />
-                <Route path="/user-segmentation" element={<UserSegmentationPage />} />
-              </Routes>
-            </div>
-          </main>
+      <div className="min-h-screen bg-[#0d1321] text-[#dbe4ff]">
+        <div className="flex h-screen flex-col">
+          <Header showFilters={showFilters} setShowFilters={setShowFilters} />
+          <div className="flex flex-1 overflow-hidden" style={{ gap: '1.5rem' }}>
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto rounded-tl-3xl main-content-bg">
+              <GlobalFilters showFilters={showFilters} setShowFilters={setShowFilters} />
+              <div className="w-full px-10 py-8 relative z-10">
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/cohort-analysis" element={<CohortAnalysisPage />} />
+                  <Route path="/funnel-analysis" element={<FunnelAnalysisPage />} />
+                  <Route path="/revenue-insights" element={<RevenueInsightsPage />} />
+                  <Route path="/user-segmentation" element={<UserSegmentationPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Routes>
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </AppContext.Provider>

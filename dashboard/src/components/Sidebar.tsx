@@ -1,130 +1,187 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
   TrendingUp,
   DollarSign,
   Target,
-  BarChart3,
   Settings,
   HelpCircle,
   Download,
-  Sparkles,
+  FileText,
+  BarChart2,
+  ChevronRight,
+  ExternalLink,
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
-  const navItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
-    { path: '/cohort-analysis', icon: Users, label: 'Cohort Analysis', section: 'main' },
-    { path: '/funnel-analysis', icon: TrendingUp, label: 'Funnel Analysis', section: 'main' },
-    { path: '/revenue-insights', icon: DollarSign, label: 'Revenue Insights', section: 'main' },
-    { path: '/user-segmentation', icon: Target, label: 'User Segmentation', section: 'main' },
+  const navigate = useNavigate();
+  const [exportingData, setExportingData] = useState(false);
+
+  const mainNavItems = [
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/cohort-analysis', icon: Users, label: 'Cohort Analysis' },
+    { path: '/funnel-analysis', icon: TrendingUp, label: 'Funnel Analysis' },
+    { path: '/revenue-insights', icon: DollarSign, label: 'Revenue Insights' },
+    { path: '/user-segmentation', icon: Target, label: 'User Segmentation' },
   ];
 
-  const utilityItems = [
-    { icon: BarChart3, label: 'Reports', action: () => console.log('Reports') },
-    { icon: Download, label: 'Export Data', action: () => console.log('Export') },
-    { icon: Settings, label: 'Settings', action: () => console.log('Settings') },
-    { icon: HelpCircle, label: 'Help & Docs', action: () => console.log('Help') },
-  ];
+  const handleExportData = async () => {
+    setExportingData(true);
+    try {
+      const [cohorts, funnel, products, segments, users] = await Promise.all([
+        fetch('http://127.0.0.1:8002/api/cohorts/').then(r => r.json()),
+        fetch('http://127.0.0.1:8002/api/funnel/').then(r => r.json()),
+        fetch('http://127.0.0.1:8002/api/products/').then(r => r.json()),
+        fetch('http://127.0.0.1:8002/api/segments/').then(r => r.json()),
+        fetch('http://127.0.0.1:8002/api/users/').then(r => r.json()),
+      ]);
+
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        cohortRetention: cohorts,
+        conversionFunnel: funnel,
+        topProducts: products,
+        userSegments: segments,
+        highValueUsers: users,
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `analytics-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    } finally {
+      setExportingData(false);
+    }
+  };
+
+  const handleViewReports = () => {
+    navigate('/');
+  };
+
+  const handleOpenDocs = () => {
+    window.open('https://github.com', '_blank');
+  };
 
   return (
-    <aside className="w-64 bg-[#020617] border-r border-slate-800 flex flex-col overflow-y-auto flex-shrink-0 h-full">
+    <aside className="flex w-48 min-w-[192px] max-w-[192px] flex-shrink-0 flex-col bg-slate-900/95 border-r border-slate-700/50">
       {/* Logo Section */}
-      <div className="p-6 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Sparkles className="w-5 h-5 text-white" />
+      <div className="px-4 py-5 border-b border-slate-700/50">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600">
+            <BarChart2 className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-indigo-400 tracking-tight">Analytics Pro</h1>
-            <p className="text-xs text-slate-600">eCommerce Intelligence</p>
-          </div>
+          <span className="text-base font-semibold text-white">Analytics Pro</span>
         </div>
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4">
-        {/* Analytics Section */}
-        <div className="px-3 mb-6">
-          <div className="px-3 py-2 text-slate-600 text-[10px] font-bold uppercase tracking-widest">
-            Analytics
+      <nav className="flex-1 overflow-y-auto px-3 py-5">
+        <div className="mb-3 px-2 text-[10px] font-semibold uppercase tracking-wider text-indigo-400/60">
+          Menu
+        </div>
+        <div className="space-y-2">
+          {mainNavItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                    : 'text-slate-300 hover:bg-indigo-500/10 hover:text-white'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-indigo-400/70 group-hover:text-indigo-300'}`} />
+                  <span className="flex-1">{item.label}</span>
+                  {isActive && <ChevronRight className="w-4 h-4 opacity-60" />}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+
+        {/* Tools Section */}
+        <div className="mt-8 pt-5 border-t border-indigo-500/20">
+          <div className="mb-3 px-2 text-[10px] font-semibold uppercase tracking-wider text-indigo-400/60">
+            Tools
           </div>
-          <div className="space-y-1">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 relative group ${
-                    isActive
-                      ? 'bg-indigo-600 text-white border-l-4 border-indigo-400 pl-2.5 shadow-lg shadow-indigo-500/20'
-                      : 'text-[#cbd5e1] hover:bg-slate-800 hover:text-white'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <item.icon
-                      className={`w-5 h-5 flex-shrink-0 transition-colors ${
-                        isActive ? 'text-white' : 'text-[#cbd5e1] group-hover:text-white'
-                      }`}
-                    />
-                    <span>{item.label}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
+          <div className="space-y-2">
+            <button
+              onClick={handleViewReports}
+              className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium bg-transparent text-indigo-200 transition-all hover:bg-indigo-500/15 hover:text-white border-0 outline-none"
+            >
+              <FileText className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300" />
+              <span className="flex-1 text-left">Reports</span>
+            </button>
+            <button
+              onClick={handleExportData}
+              disabled={exportingData}
+              className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium bg-transparent text-emerald-200 transition-all hover:bg-emerald-500/15 hover:text-emerald-100 disabled:opacity-50 border-0 outline-none"
+            >
+              {exportingData ? (
+                <div className="w-5 h-5 border-2 border-emerald-500/50 border-t-emerald-300 rounded-full animate-spin" />
+              ) : (
+                <Download className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300" />
+              )}
+              <span className="flex-1 text-left">{exportingData ? 'Exporting...' : 'Export Data'}</span>
+            </button>
           </div>
         </div>
 
-        {/* Utility Section */}
-        <div className="px-3 border-t border-slate-800 pt-4">
-          <div className="px-3 py-2 text-slate-600 text-[10px] font-bold uppercase tracking-widest">
-            Tools
-          </div>
-          <div className="space-y-1">
-            {utilityItems.map((item, idx) => (
-              <button
-                key={idx}
-                onClick={item.action}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-[#cbd5e1] hover:bg-slate-800 hover:text-white transition-all duration-200 group"
-              >
-                <item.icon className="w-5 h-5 flex-shrink-0 text-[#cbd5e1] group-hover:text-white transition-colors" />
-                <span>{item.label}</span>
-              </button>
-            ))}
+        {/* Settings Section */}
+        <div className="mt-8 pt-5 border-t border-indigo-500/20">
+          <div className="space-y-2">
+            <NavLink
+              to="/settings"
+              className={({ isActive }) =>
+                `group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-violet-500/20 text-violet-200'
+                    : 'bg-transparent text-violet-200 hover:bg-violet-500/15 hover:text-violet-100'
+                }`
+              }
+            >
+              <Settings className="w-5 h-5 text-violet-400 group-hover:text-violet-300" />
+              <span className="flex-1">Settings</span>
+            </NavLink>
+            <button
+              onClick={handleOpenDocs}
+              className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium bg-transparent text-amber-200 transition-all hover:bg-amber-500/15 hover:text-amber-100 border-0 outline-none"
+            >
+              <HelpCircle className="w-5 h-5 text-amber-400 group-hover:text-amber-300" />
+              <span className="flex-1 text-left">Help & Docs</span>
+              <ExternalLink className="w-4 h-4 text-amber-400/70" />
+            </button>
           </div>
         </div>
       </nav>
 
-      {/* Stats Section - Fixed at Bottom */}
-      <div className="border-t border-slate-800 p-4 bg-[#020617]">
-        <div className="bg-[#1e293b] rounded-xl p-4 border border-slate-700 shadow-xl">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[#64748b] text-xs font-bold uppercase tracking-wide">Total Users</div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50" />
-              <span className="text-emerald-400 text-xs font-semibold">Live</span>
+      {/* Bottom Stats */}
+      <div className="border-t border-indigo-500/20 p-4">
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 border border-indigo-500/20 p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-indigo-300/70 mb-3">
+            Quick Stats
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-slate-900/60 rounded-xl p-3 border border-indigo-500/20">
+              <p className="text-[10px] text-indigo-300/60">Orders</p>
+              <p className="text-lg font-bold text-white">19</p>
             </div>
-          </div>
-          <div className="text-[#f8fafc] text-3xl font-bold mb-1 tracking-tight">57</div>
-          <div className="text-[#64748b] text-xs mb-3">November 2025</div>
-          <div className="h-2 bg-slate-900 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full shadow-lg" style={{ width: '75%' }} />
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="bg-[#1e293b] rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-colors">
-            <div className="text-[#64748b] text-xs font-semibold">Orders</div>
-            <div className="text-[#f8fafc] text-xl font-bold mt-1">19</div>
-          </div>
-          <div className="bg-[#1e293b] rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-colors">
-            <div className="text-[#64748b] text-xs font-semibold">Revenue</div>
-            <div className="text-[#f8fafc] text-xl font-bold mt-1">₹2.4M</div>
+            <div className="bg-slate-900/60 rounded-xl p-3 border border-emerald-500/20">
+              <p className="text-[10px] text-emerald-300/60">Revenue</p>
+              <p className="text-lg font-bold text-emerald-400">₹300K</p>
+            </div>
           </div>
         </div>
       </div>

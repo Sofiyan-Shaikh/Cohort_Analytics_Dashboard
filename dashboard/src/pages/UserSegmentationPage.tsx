@@ -1,8 +1,7 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { AppContext } from '../App';
-import { motion } from 'framer-motion';
 import { Users, Download, Target, Filter } from 'lucide-react';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -13,33 +12,47 @@ const UserSegmentationPage: React.FC = () => {
 
   if (!context) return null;
 
-  const { funnelData, cohortData } = context;
+  const { segmentsData, highValueUsers } = context;
 
+  // Normalize segments data
   const lifecycleData = useMemo(() => {
-    return [
-      { name: 'New Users', value: 35, color: '#3B82F6', count: 20 },
-      { name: 'Active Users', value: 40, color: '#10B981', count: 23 },
-      { name: 'At-Risk Users', value: 15, color: '#F59E0B', count: 9 },
-      { name: 'Churned Users', value: 10, color: '#EF4444', count: 5 },
-    ];
-  }, []);
-
-  const highValueUsers = useMemo(() => {
-    const purchases = funnelData.find((s) => s.step === 'Purchase')?.users || 0;
-    return Array.from({ length: Math.min(purchases, 10) }, (_, i) => ({
-      id: 1000 + i,
-      name: `User ${1000 + i}`,
-      purchases: Math.floor(Math.random() * 5) + 1,
-      ltv: Math.floor(Math.random() * 50000) + 20000,
-      segment: ['High-Value', 'Power User', 'VIP'][Math.floor(Math.random() * 3)],
-      lastPurchase: `Nov ${Math.floor(Math.random() * 28) + 1}`,
+    return segmentsData.map((segment) => ({
+      name: segment.segment_name,
+      value: typeof segment.percentage === 'string' ? parseFloat(segment.percentage) : segment.percentage,
+      color: segment.color,
+      count: segment.user_count,
     }));
-  }, [funnelData]);
+  }, [segmentsData]);
 
+  // Filter high value users based on segment
   const filteredUsers = useMemo(() => {
     if (segmentFilter === 'all') return highValueUsers;
     return highValueUsers.filter((u) => u.segment === segmentFilter);
   }, [highValueUsers, segmentFilter]);
+
+  // Get unique segments for filter dropdown
+  const uniqueSegments = useMemo(() => {
+    const segments = new Set(highValueUsers.map((u) => u.segment));
+    return Array.from(segments);
+  }, [highValueUsers]);
+
+  // Calculate segment stats
+  const segmentStats = useMemo(() => {
+    const atRisk = lifecycleData.find((s) => s.name === 'At-Risk Users');
+    const churned = lifecycleData.find((s) => s.name === 'Churned Users');
+    const newUsers = lifecycleData.find((s) => s.name === 'New Users');
+    const totalLTV = highValueUsers.reduce((sum, u) => sum + u.ltv, 0);
+    const topUsersRevenue = highValueUsers.slice(0, 10).reduce((sum, u) => sum + u.ltv, 0);
+
+    return {
+      atRiskCount: atRisk?.count || 0,
+      churnedCount: churned?.count || 0,
+      newUsersCount: newUsers?.count || 0,
+      totalLTV,
+      topUsersRevenue,
+      topUsersPercentage: totalLTV > 0 ? ((topUsersRevenue / totalLTV) * 100).toFixed(0) : 0,
+    };
+  }, [lifecycleData, highValueUsers]);
 
   const exportToPDF = async () => {
     setExporting(true);
@@ -61,230 +74,222 @@ const UserSegmentationPage: React.FC = () => {
   };
 
   return (
-    <div id="segmentation-page" className="space-y-8 animate-fade-in">
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+    <div id="segmentation-page" style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-slate-100 mb-2">User Segmentation</h1>
-          <p className="text-slate-400 text-lg">Identify and target high-value user segments</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">User Segmentation</h1>
+          <p className="text-sm text-slate-400 mt-1">Identify and target high-value user segments</p>
         </div>
         <button
           onClick={exportToPDF}
           disabled={exporting}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-lg transition-all shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 disabled:opacity-50 font-medium"
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white px-4 py-2 rounded-xl transition-all text-sm font-medium shadow-lg shadow-indigo-500/25"
         >
-          <Download className="w-5 h-5" />
-          {exporting ? 'Exporting...' : 'Export PDF'}
+          {exporting ? (
+            <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          <span>{exporting ? 'Exporting...' : 'Export PDF'}</span>
         </button>
-      </motion.div>
+      </div>
 
       {/* Lifecycle Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass rounded-xl border border-slate-800 p-6 shadow-xl shadow-black/20"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center">
-              <Target className="w-5 h-5 text-cyan-400" />
+      <div className="grid grid-cols-2" style={{ gap: '2rem' }}>
+        <div className="bg-[#111827] border border-slate-600/60 rounded-2xl p-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-cyan-500/15 rounded-xl flex items-center justify-center">
+              <Target className="w-6 h-6 text-cyan-400" />
             </div>
-            <h2 className="text-2xl font-semibold text-slate-100">User Lifecycle Distribution</h2>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={lifecycleData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {lifecycleData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', borderRadius: '8px' }}
-                formatter={(value: number, name: string, props: any) => [`${value}% (${props.payload.count} users)`, name]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </motion.div>
+          <h2 className="text-base font-semibold text-white text-center mb-4">User Lifecycle</h2>
+          {lifecycleData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={lifecycleData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={70}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {lifecycleData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                  }}
+                  formatter={(value: number, name: string, props: any) => [`${value}% (${props.payload.count})`, name]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-slate-400 text-sm">
+              Loading segments data...
+            </div>
+          )}
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-4"
-        >
+        <div className="space-y-3">
           {lifecycleData.map((segment, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + idx * 0.1 }}
-              className="glass rounded-xl border border-slate-800 p-5 hover:border-slate-700 transition-all card-hover shadow-xl shadow-black/20"
-            >
+            <div key={idx} className="bg-[#111827] border border-slate-600/60 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-lg shadow-lg" style={{ backgroundColor: segment.color }} />
-                  <h3 className="font-semibold text-slate-100">{segment.name}</h3>
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: segment.color }} />
+                  <span className="text-sm text-white font-medium">{segment.name}</span>
                 </div>
-                <span className="text-2xl font-bold" style={{ color: segment.color }}>
+                <span className="text-xl font-bold" style={{ color: segment.color }}>
                   {segment.count}
                 </span>
               </div>
-              <div className="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden">
-                <div className="h-2.5 rounded-full shadow-lg" style={{ width: `${segment.value}%`, backgroundColor: segment.color }} />
+              <div className="w-full bg-slate-900 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full"
+                  style={{ width: `${segment.value}%`, backgroundColor: segment.color }}
+                />
               </div>
-              <p className="text-xs text-slate-500 mt-2 font-medium">{segment.value}% of total users</p>
-            </motion.div>
+              <p className="text-xs text-slate-500 mt-2 text-center">{segment.value}% of total</p>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
 
       {/* High-Value Users Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="glass rounded-xl border border-slate-800 p-6 shadow-xl shadow-black/20"
-      >
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-[#111827] border border-slate-600/60 rounded-2xl p-8">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-emerald-400" />
+            <div className="w-12 h-12 bg-emerald-500/15 rounded-xl flex items-center justify-center">
+              <Users className="w-6 h-6 text-emerald-400" />
             </div>
-            <h2 className="text-2xl font-semibold text-slate-100">High-Value Users</h2>
+            <h2 className="text-base font-semibold text-white">High-Value Users</h2>
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-3 h-3 text-slate-500" />
             <select
               value={segmentFilter}
               onChange={(e) => setSegmentFilter(e.target.value)}
-              className="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-slate-600"
             >
               <option value="all">All Segments</option>
-              <option value="High-Value">High-Value</option>
-              <option value="Power User">Power User</option>
-              <option value="VIP">VIP</option>
+              {uniqueSegments.map((segment) => (
+                <option key={segment} value={segment}>
+                  {segment}
+                </option>
+              ))}
             </select>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-700">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">User ID</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Purchases</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">LTV</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Segment</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Last Purchase</th>
+              <tr className="border-b border-slate-600/60">
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">ID</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Name</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Orders</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">LTV</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Segment</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Last Order</th>
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user, idx) => (
-                <motion.tr
-                  key={user.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + idx * 0.05 }}
-                  className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors"
-                >
-                  <td className="px-4 py-3 text-sm font-mono">{user.id}</td>
-                  <td className="px-4 py-3 text-sm font-medium">{user.name}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className="bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded text-xs font-semibold">
-                      {user.purchases}
-                    </span>
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <tr key={user.user_id} className="border-b border-slate-700/30 hover:bg-slate-700/20">
+                    <td className="px-3 py-2 text-xs font-mono text-slate-300">{user.user_id}</td>
+                    <td className="px-3 py-2 text-xs text-slate-300">{user.name}</td>
+                    <td className="px-3 py-2 text-xs">
+                      <span className="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded text-xs font-medium">
+                        {user.purchases}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-xs font-medium text-emerald-400">₹{user.ltv.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-xs">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                          user.segment === 'VIP'
+                            ? 'bg-purple-500/20 text-purple-400'
+                            : user.segment === 'Power User'
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : 'bg-amber-500/20 text-amber-400'
+                        }`}
+                      >
+                        {user.segment}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-xs text-slate-500">
+                      {new Date(user.last_purchase).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-3 py-8 text-center text-slate-400 text-sm">
+                    No users found for this segment
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-emerald-400">₹{user.ltv.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-semibold ${
-                        user.segment === 'VIP'
-                          ? 'bg-purple-900/50 text-purple-400'
-                          : user.segment === 'Power User'
-                          ? 'bg-blue-900/50 text-blue-400'
-                          : 'bg-amber-900/50 text-amber-400'
-                      }`}
-                    >
-                      {user.segment}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">{user.lastPurchase}</td>
-                </motion.tr>
-              ))}
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </motion.div>
+      </div>
 
-      {/* AI Recommendations */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-purple-700/50 p-6 rounded-xl"
-      >
-        <h2 className="text-2xl font-bold mb-4">💡 Segmentation Strategies</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Recommendations - Now using real data */}
+      <div className="bg-[#111827] border border-slate-600/60 rounded-2xl p-8">
+        <h2 className="text-sm font-semibold text-white mb-4">💡 Segmentation Strategies</h2>
+        <div className="grid grid-cols-2 gap-3">
           {[
             {
               icon: '🎯',
               title: 'Target At-Risk Users',
-              description: '9 users at risk of churning. Send personalized re-engagement emails with 15% discount.',
+              description: `${segmentStats.atRiskCount} users at risk. Send re-engagement emails with 15% discount.`,
               impact: 'High',
             },
             {
               icon: '💎',
-              title: 'VIP Program for High-Value',
-              description: 'Top 10 users generate 45% of revenue. Offer exclusive perks and early access.',
+              title: 'VIP Program',
+              description: `Top 10 users generate ${segmentStats.topUsersPercentage}% revenue. Offer exclusive perks.`,
               impact: 'High',
             },
             {
               icon: '📧',
-              title: 'Win Back Churned Users',
-              description: '5 churned users. Launch win-back campaign with special offers. Potential: ₹42K.',
+              title: 'Win Back Churned',
+              description: `${segmentStats.churnedCount} churned users. Launch win-back campaign. Potential: ₹${((segmentStats.churnedCount * 8500) / 1000).toFixed(0)}K.`,
               impact: 'Medium',
             },
             {
               icon: '🚀',
               title: 'Activate New Users',
-              description: '20 new users need onboarding. Send product guides and first-purchase incentives.',
+              description: `${segmentStats.newUsersCount} new users need onboarding. Send product guides.`,
               impact: 'Medium',
             },
           ].map((rec, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.7 + idx * 0.1 }}
-              className="bg-slate-800/50 p-5 rounded-lg border border-slate-700 hover:border-emerald-500 transition-colors"
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-3xl">{rec.icon}</span>
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">{rec.title}</h3>
-                  <p className="text-sm text-gray-300 mb-3">{rec.description}</p>
+            <div key={idx} className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg border border-slate-700/30">
+              <span className="text-xl">{rec.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-medium text-white">{rec.title}</h3>
                   <span
-                    className={`text-xs px-2 py-1 rounded ${
-                      rec.impact === 'High' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-amber-900/50 text-amber-400'
+                    className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                      rec.impact === 'High' ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'
                     }`}
                   >
-                    {rec.impact} Impact
+                    {rec.impact}
                   </span>
                 </div>
+                <p className="text-xs text-slate-400 mt-1">{rec.description}</p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

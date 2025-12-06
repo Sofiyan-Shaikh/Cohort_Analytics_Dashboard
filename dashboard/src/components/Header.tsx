@@ -1,6 +1,7 @@
-import React from 'react';
-import { Calendar, Circle, User, Filter, Download, ChevronRight } from 'lucide-react';
+import React, { useContext, useEffect, useState } from 'react';
+import { Calendar, User, Filter, ChevronRight } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { AppContext } from '../App';
 
 interface HeaderProps {
   showFilters: boolean;
@@ -9,6 +10,42 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ showFilters, setShowFilters }) => {
   const location = useLocation();
+  const context = useContext(AppContext);
+  const [dateEditorOpen, setDateEditorOpen] = useState(false);
+  const [draftRange, setDraftRange] = useState<{ start: string; end: string }>({
+    start: context?.dateRange.start ?? '',
+    end: context?.dateRange.end ?? '',
+  });
+  const [dateError, setDateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (context?.dateRange) {
+      setDraftRange(context.dateRange);
+      setDateError(null);
+    }
+  }, [context?.dateRange]);
+
+  const formattedRange = context
+    ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(
+        new Date(context.dateRange.start),
+      ) +
+      ' - ' +
+      new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(context.dateRange.end))
+    : 'Select range';
+
+  const applyRange = () => {
+    if (!draftRange.start || !draftRange.end) {
+      setDateError('Pick both dates');
+      return;
+    }
+    if (new Date(draftRange.start) > new Date(draftRange.end)) {
+      setDateError('Start must be before end');
+      return;
+    }
+    context?.setDateRange(draftRange);
+    setDateEditorOpen(false);
+    setDateError(null);
+  };
 
   const getBreadcrumb = () => {
     const path = location.pathname;
@@ -23,62 +60,104 @@ const Header: React.FC<HeaderProps> = ({ showFilters, setShowFilters }) => {
   const breadcrumbs = getBreadcrumb();
 
   return (
-    <header className="h-16 bg-[#0f172a] border-b border-slate-800 z-[100] flex items-center justify-between px-6 flex-shrink-0">
-      {/* Left: Breadcrumb */}
-      <div className="flex items-center flex-1 min-w-0">
-        <nav className="flex items-center gap-2 text-sm">
-          {breadcrumbs.map((crumb, index) => (
-            <React.Fragment key={index}>
-              <span className={index === breadcrumbs.length - 1 ? 'text-[#f8fafc] font-semibold' : 'text-[#64748b]'}>
-                {crumb}
-              </span>
-              {index < breadcrumbs.length - 1 && (
-                <ChevronRight className="w-4 h-4 text-[#475569]" />
-              )}
-            </React.Fragment>
-          ))}
-        </nav>
-      </div>
+    <header className="flex h-14 items-center justify-between border-b border-slate-700/50 bg-[#0d1321] px-8">
+      {/* Left: Breadcrumb Navigation */}
+      <nav className="flex items-center gap-1.5 text-sm">
+        {breadcrumbs.map((crumb, index) => (
+          <React.Fragment key={index}>
+            <span 
+              className={`${
+                index === breadcrumbs.length - 1 
+                  ? 'text-white font-medium' 
+                  : 'text-slate-400 hover:text-slate-300 cursor-pointer'
+              }`}
+            >
+              {crumb}
+            </span>
+            {index < breadcrumbs.length - 1 && (
+              <ChevronRight className="w-3.5 h-3.5 text-slate-600 mx-0.5" />
+            )}
+          </React.Fragment>
+        ))}
+      </nav>
 
-      {/* Right: Controls */}
-      <div className="flex items-center gap-4 flex-shrink-0">
-        {/* Date Range */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#1e293b] border border-slate-700 rounded-lg text-[#e2e8f0] text-sm hover:border-slate-600 transition-colors cursor-pointer">
-          <Calendar className="w-4 h-4 text-[#94a3b8]" />
-          <span className="font-semibold">Nov 1 – Nov 30, 2025</span>
-        </div>
-
-        {/* Live Data Badge */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg shadow-lg shadow-emerald-500/10">
-          <Circle className="w-2 h-2 fill-emerald-400 text-emerald-400 animate-pulse" />
-          <span className="text-emerald-400 text-sm font-semibold">Live Data</span>
+      {/* Right: Action Buttons */}
+      <div className="flex items-center" style={{ gap: '1rem' }}>
+        {/* Date Range Picker */}
+        <div className="relative">
+          <button
+            onClick={() => setDateEditorOpen((prev) => !prev)}
+            className="flex items-center gap-2 h-9 rounded-lg border border-slate-600/50 bg-[#111827] px-3 text-sm text-slate-200 hover:border-slate-500 hover:bg-[#1a2332] transition-all"
+          >
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <span>{formattedRange}</span>
+          </button>
+          {dateEditorOpen && (
+            <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-slate-600/50 bg-[#111827] p-4 shadow-2xl">
+              <div className="grid gap-3">
+                <label className="text-xs text-slate-400 font-medium">
+                  Start date
+                  <input
+                    type="date"
+                    value={draftRange.start}
+                    max={draftRange.end || undefined}
+                    onChange={(e) => {
+                      setDraftRange((prev) => ({ ...prev, start: e.target.value }));
+                      setDateError(null);
+                    }}
+                    className="mt-1.5 w-full rounded-lg border border-slate-600/50 bg-[#0d1321] px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
+                  />
+                </label>
+                <label className="text-xs text-slate-400 font-medium">
+                  End date
+                  <input
+                    type="date"
+                    value={draftRange.end}
+                    min={draftRange.start || undefined}
+                    onChange={(e) => {
+                      setDraftRange((prev) => ({ ...prev, end: e.target.value }));
+                      setDateError(null);
+                    }}
+                    className="mt-1.5 w-full rounded-lg border border-slate-600/50 bg-[#0d1321] px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
+                  />
+                </label>
+              </div>
+              {dateError && <p className="mt-2 text-xs text-rose-400">{dateError}</p>}
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setDateEditorOpen(false)}
+                  className="h-8 rounded-lg border border-slate-600/50 px-3 text-xs text-slate-300 hover:bg-slate-700/30"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={applyRange} 
+                  className="h-8 rounded-lg bg-indigo-600 px-4 text-xs font-medium text-white hover:bg-indigo-500"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Filters Button */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex items-center gap-2 h-9 rounded-lg border px-3 text-sm font-medium transition-all ${
             showFilters
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
-              : 'bg-[#1e293b] text-[#e2e8f0] border border-slate-700 hover:bg-slate-800 hover:border-slate-600'
+              ? 'border-indigo-500 bg-indigo-500/20 text-white'
+              : 'border-slate-600/50 bg-[#111827] text-slate-200 hover:border-slate-500 hover:bg-[#1a2332]'
           }`}
         >
           <Filter className="w-4 h-4" />
           <span>Filters</span>
         </button>
 
-        {/* Export PDF Button */}
-        <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105">
-          <Download className="w-4 h-4" />
-          <span>Export PDF</span>
-        </button>
-
-        {/* Divider */}
-        <div className="h-8 w-px bg-slate-700" />
-
-        {/* User Avatar */}
-        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center cursor-pointer hover:shadow-lg hover:shadow-indigo-500/30 transition-all hover:scale-105">
-          <User className="w-5 h-5 text-white" />
+        {/* User Profile */}
+        <div className="flex items-center gap-2 h-9 rounded-lg border border-slate-600/50 bg-[#111827] px-3 text-sm text-slate-200">
+          <User className="w-4 h-4 text-slate-400" />
+          <span>Ops Lead</span>
         </div>
       </div>
     </header>

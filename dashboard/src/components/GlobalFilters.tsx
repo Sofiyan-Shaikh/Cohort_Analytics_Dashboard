@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { AppContext } from '../App';
-import { Calendar, Filter, ChevronDown, Smartphone, Globe, Activity } from 'lucide-react';
+import { Calendar, Smartphone, Globe, Activity } from 'lucide-react';
 
 interface GlobalFiltersProps {
   showFilters: boolean;
@@ -17,10 +17,21 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ showFilters, setShowFilte
   if (!showFilters) return null;
 
   return (
-    <div className="bg-[#1e293b] border-b border-slate-700 px-8 py-8 animate-slide-in">
-      <div className="max-w-7xl mx-auto">
-        <h3 className="text-lg font-semibold text-[#f8fafc] mb-6">Filter Options</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="border-b border-white/10 bg-[#0b142c] px-8 py-6 shadow-inner">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Global Filters</p>
+            <h3 className="text-2xl font-semibold text-white font-[var(--font-display)]">Refine intelligence</h3>
+          </div>
+          <button
+            onClick={() => setShowFilters(false)}
+            className="text-xs uppercase tracking-widest text-slate-400 hover:text-white"
+          >
+            Hide
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Date Range */}
           <div>
             <label className="flex items-center gap-2 text-[#94a3b8] text-xs mb-2 font-semibold uppercase tracking-wide">
@@ -32,13 +43,13 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ showFilters, setShowFilte
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm flex-1 text-[#e2e8f0] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
+                className="flex-1 rounded-xl border border-white/10 bg-[#101a34] px-3 py-2 text-sm text-slate-100 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm flex-1 text-[#e2e8f0] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
+                className="flex-1 rounded-xl border border-white/10 bg-[#101a34] px-3 py-2 text-sm text-slate-100 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
           </div>
@@ -52,7 +63,7 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ showFilters, setShowFilte
             <select
               value={deviceFilter}
               onChange={(e) => setDeviceFilter(e.target.value)}
-              className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm w-full text-[#e2e8f0] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
+              className="w-full rounded-xl border border-white/10 bg-[#101a34] px-3 py-2 text-sm text-slate-100 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All Devices</option>
               <option value="mobile">Mobile</option>
@@ -70,7 +81,7 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ showFilters, setShowFilte
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm w-full text-[#e2e8f0] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
+              className="w-full rounded-xl border border-white/10 bg-[#101a34] px-3 py-2 text-sm text-slate-100 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All Sources</option>
               <option value="google">Google</option>
@@ -90,7 +101,7 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ showFilters, setShowFilte
             <select
               value={eventFilter}
               onChange={(e) => setEventFilter(e.target.value)}
-              className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm w-full text-[#e2e8f0] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
+              className="w-full rounded-xl border border-white/10 bg-[#101a34] px-3 py-2 text-sm text-slate-100 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All Events</option>
               <option value="page_view">Page View</option>

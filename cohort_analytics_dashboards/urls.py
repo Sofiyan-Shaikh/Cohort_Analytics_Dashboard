@@ -22,4 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/cohorts/', views.cohort_analysis, name='cohort_analysis'),
     path('api/funnel/', views.funnel_analysis, name='funnel_analysis'),
+    path('api/products/', views.top_products, name='top_products'),
+    path('api/segments/', views.user_segments, name='user_segments'),
+    path('api/users/', views.high_value_users, name='high_value_users'),
 ]

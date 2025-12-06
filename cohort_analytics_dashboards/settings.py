@@ -77,12 +77,8 @@ WSGI_APPLICATION = 'cohort_analytics_dashboards.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',  # Replace with your PostgreSQL database name
-        'USER': 'postgres',  # Replace with your PostgreSQL username
-        'PASSWORD': 'Rose@071',  # Replace with your PostgreSQL password
-        'HOST': 'localhost',  # Replace with your PostgreSQL host, e.g., '127.0.0.1'
-        'PORT': '5433',  # Replace with your PostgreSQL port, default is '5432'
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
