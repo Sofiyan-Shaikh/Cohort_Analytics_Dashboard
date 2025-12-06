@@ -94,7 +94,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in 
-    os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+    os.environ.get('CORS_ALLOWED_ORIGINS', 'https://cohort-analytics-dashboard-1.onrender.com').split(',')
     if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
