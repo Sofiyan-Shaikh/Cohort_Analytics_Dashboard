@@ -2,6 +2,21 @@ from django.http import JsonResponse
 from django.db import connection
 
 
+def health_check(request):
+    """Health check endpoint for Render"""
+    return JsonResponse({
+        'status': 'ok',
+        'message': 'Cohort Analytics API is running',
+        'endpoints': [
+            '/api/cohorts/',
+            '/api/funnel/',
+            '/api/products/',
+            '/api/segments/',
+            '/api/users/',
+        ]
+    })
+
+
 def cohort_analysis(request):
     """API endpoint for cohort retention data"""
     query = """
